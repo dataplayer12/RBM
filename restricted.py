@@ -54,32 +54,32 @@ class RBM:
 		
 		this_x=xtilda
 		for iter in range(k):
-			this_h=self.sampleh(this_x,get_prob=True)
-			this_x=self.samplex(this_h,get_prob=True)
-			#while training we use probabilities instead of sampling binary vectors themselves
-			#This makes all the difference in the world 
-			#refer to Section 3 of Hinton's 'A practical guide to training RBMs'
+			this_h=self.sampleh(this_x)
+			this_x=self.samplex(this_h)
 		return this_x
 
-	def NLL(self):
+	def NLL(self): #negative log likelihood
 		xs=self.inputs[:100,:]
 		hidden=self.sampleh(xs)
 		probabilities=self.samplex(hidden,get_prob=True)
 		return -np.mean(np.log(probabilities))
 
 	def fit(self,epochs=10,k=None):
-		if k is None:
+		if k is None: #rather than manually specifying, we use random number of steps at each iteration
 			print('Training with random number  of steps')
 		
-		xtilda=self.inputs[:self.batchsize,:] #initialize Markov chain to x
+		xtilda=self.inputs[:self.batchsize,:] #initialize Gibbs chain to x
 		for e in range(epochs):
 			for batchx in self.get_minibatch():
 				xtilda=self.get_xtilda(xtilda,k=k) #performs persitent contrastive divergence
-		
-				self.weights += (self.alpha/self.batchsize)*(np.dot(self.sampleh(batchx,1).T,batchx)-np.dot(self.sampleh(xtilda,1).T,xtilda)).T
-				self.b += self.alpha*(self.sampleh(batchx,1)-self.sampleh(xtilda,1)).mean(axis=0)
+				
+				self.weights += (self.alpha/self.batchsize)*(np.dot(self.sampleh(batchx,True).T,batchx)-np.dot(self.sampleh(xtilda,True).T,xtilda)).T
+				#while training we use probabilities instead of sampling binary vectors themselves (thus, sampleh(~,1))
+				#This makes a huge difference in training
+				#refer to Section 3 of Hinton's 'A practical guide to training RBMs'
+				self.b += self.alpha*(self.sampleh(batchx,True)-self.sampleh(xtilda,True)).mean(axis=0)
 				self.c += self.alpha*(batchx-xtilda).mean(axis=0)
-
+			
 			print('Epoch {}/{}: NLL={:.5f}'.format(e+1,epochs,self.NLL()))
 		print('RBM trained')
 
@@ -88,10 +88,10 @@ class RBM:
 			pickle.dump((self.weights,self.b,self.c),f)
 		print('Trained RBM saved')
 	
-	def load(self,filename): #helper function to load saved model
-		if not filename in os.listdir('./'):
-			print('{} was not found in this folder'.format(filename))
-		with open(filename,'rb') as f:
+	def load(self,filename,folder='./'): #helper function to load saved model
+		if not filename in os.listdir(folder):
+			print('{} was not found in folder {}'.format(filename,folder))
+		with open(folder+filename,'rb') as f:
 			try:
 				self.weights,self.b,self.c = pickle.load(f,encoding='latin1')
 			except:
