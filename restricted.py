@@ -13,7 +13,7 @@ class RBM:
 		self.inputs=inputs_vec #input data: expected shape (n_datapoints,n_features)
 		self.visible_units=self.inputs.shape[1] #n_features
 		self.hidden_units=H
-		self.alpha=alpha #learning rate
+		self.alpha=alpha #learning rate for RBM model
 		self.allowedk=np.arange(10)*2 + 1 # allowed chain length k in CD-k #1 to 19
 		self.sigma=sigma #stddev of initialized weights
 		self.batchsize=batchsize
